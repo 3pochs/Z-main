@@ -596,7 +596,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           </main>
 
           {/* Footer with navigation (only show for certain steps) */}
-          {((isGoalSelectionStep && !location.userConfirmed) || isPreferencesStep || isAccountStep) && (
+          {((isGoalSelectionStep && !location.userConfirmed) || isAccountStep) && (
             <footer
               className="sticky bottom-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-t"
               role="contentinfo"

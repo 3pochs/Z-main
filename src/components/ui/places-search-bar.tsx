@@ -123,68 +123,67 @@ export const PlacesSearchBar: React.FC<PlacesSearchBarProps> = ({
         </div>
       )}
 
-      {/* Suggestions dropdown */}
-      {showSuggestions && (
-        <Card className="absolute z-[100] w-full mt-2 max-h-60 overflow-y-auto shadow-xl rounded-xl border-border/50 bg-popover/95 backdrop-blur-md">
-          <CardContent className="p-2">
-            {suggestions.map((suggestion, index) => (
-              <div
-                key={suggestion.place_id || index}
-                className="p-3 hover:bg-accent/50 rounded-lg cursor-pointer transition-colors"
-                onClick={() => handleSuggestionClick(suggestion)}
-              >
-                <div className="flex items-start gap-3">
-                  <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium text-sm truncate">
-                      {suggestion.name || 'Unknown Business'}
-                    </div>
-                    <div className="text-xs text-muted-foreground mt-1 truncate">
-                      {suggestion.formatted_address || suggestion.vicinity || 'No address available'}
-                    </div>
-                    {suggestion.types && suggestion.types[0] && (
-                      <Badge variant="secondary" className="mt-1 text-xs">
-                        {suggestion.types[0].replace(/_/g, ' ')}
-                      </Badge>
-                    )}
-                  </div>
+      {/* Unified Dropdown Container */}
+      {(showSuggestions || showLoading || showError || (isFocused && searchQuery.length >= 3 && !placesLoading && !placesError && suggestions.length === 0)) && (
+        <Card className="absolute z-[100] w-full mt-2 shadow-xl rounded-xl border-border/50 bg-popover/95 backdrop-blur-md overflow-hidden">
+          <CardContent className="p-0">
+            {/* Loading State */}
+            {showLoading && !showSuggestions && (
+              <div className="p-4 text-center">
+                <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Searching for places...
                 </div>
               </div>
-            ))}
-          </CardContent>
-        </Card>
-      )}
+            )}
 
-      {/* Loading state */}
-      {showLoading && !showSuggestions && (
-        <Card className="absolute z-50 w-full mt-1 shadow-lg">
-          <CardContent className="p-4 text-center">
-            <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Searching for places...
-            </div>
-          </CardContent>
-        </Card>
-      )}
+            {/* Error State */}
+            {showError && !showSuggestions && !showLoading && (
+              <div className="p-4 text-center">
+                <div className="text-sm text-destructive">
+                  {placesError.message}
+                </div>
+              </div>
+            )}
 
-      {/* Error state */}
-      {showError && !showSuggestions && !showLoading && (
-        <Card className="absolute z-50 w-full mt-1 shadow-lg">
-          <CardContent className="p-4 text-center">
-            <div className="text-sm text-destructive">
-              {placesError.message}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+            {/* No Results State */}
+            {isFocused && searchQuery.length >= 3 && !placesLoading && !placesError && suggestions.length === 0 && (
+              <div className="p-4 text-center">
+                <div className="text-sm text-muted-foreground">
+                  No places found. Try a different search term.
+                </div>
+              </div>
+            )}
 
-      {/* No results state */}
-      {isFocused && searchQuery.length >= 3 && !placesLoading && !placesError && suggestions.length === 0 && (
-        <Card className="absolute z-50 w-full mt-1 shadow-lg">
-          <CardContent className="p-4 text-center">
-            <div className="text-sm text-muted-foreground">
-              No places found. Try a different search term.
-            </div>
+            {/* Suggestions List */}
+            {showSuggestions && (
+              <div className="max-h-60 overflow-y-auto p-2">
+                {suggestions.map((suggestion, index) => (
+                  <div
+                    key={suggestion.place_id || index}
+                    className="p-3 hover:bg-accent/50 rounded-lg cursor-pointer transition-colors"
+                    onClick={() => handleSuggestionClick(suggestion)}
+                  >
+                    <div className="flex items-start gap-3">
+                      <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-sm truncate">
+                          {suggestion.name || 'Unknown Business'}
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-1 truncate">
+                          {suggestion.formatted_address || suggestion.vicinity || 'No address available'}
+                        </div>
+                        {suggestion.types && suggestion.types[0] && (
+                          <Badge variant="secondary" className="mt-1 text-xs">
+                            {suggestion.types[0].replace(/_/g, ' ')}
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       )}

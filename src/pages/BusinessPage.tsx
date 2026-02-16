@@ -534,11 +534,11 @@ const BusinessPage: React.FC = () => {
                     <CardContent className="space-y-3 text-sm">
                       <div className="flex items-center gap-3">
                         <ScoreIndicator score={4} size="small" variant="icon" />
-                        <span className="font-medium text-success text-xs">Very Welcoming (3.6+)</span>
+                        <span className="font-medium text-success text-xs">Very Welcoming (3.5+)</span>
                       </div>
                       <div className="flex items-center gap-3">
                         <ScoreIndicator score={2} size="small" variant="icon" />
-                        <span className="font-medium text-warning text-xs">Moderately Welcoming (1.5-3.5)</span>
+                        <span className="font-medium text-warning text-xs">Moderately Welcoming (1.5-3.4)</span>
                       </div>
                       <div className="flex items-center gap-3">
                         <ScoreIndicator score={1} size="small" variant="icon" />
