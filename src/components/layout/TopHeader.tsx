@@ -29,18 +29,16 @@ export const TopHeader = () => {
           </Link>
         </div>
 
-        {/* Search Bar - Expanded on Desktop - Hidden on Home Page */}
-        {!isHomePage && (
-          <div className="flex-1 max-w-2xl flex items-center gap-2">
-            <PlacesSearchBar
-              onPlaceSelect={(place) => {
-                navigate(`/business/${place.place_id}`);
-              }}
-              className="w-full"
-              inputClassName="bg-background border border-input hover:bg-accent focus:bg-background focus:ring-2 focus:ring-primary/50 transition-all duration-200 rounded-xl h-10 text-foreground placeholder:text-muted-foreground"
-            />
-          </div>
-        )}
+        {/* Search Bar - Visible on all pages */}
+        <div className="flex-1 max-w-2xl flex items-center gap-2">
+          <PlacesSearchBar
+            onPlaceSelect={(place) => {
+              navigate(`/business/${place.place_id}`);
+            }}
+            className="w-full"
+            inputClassName="bg-background border border-input hover:bg-accent focus:bg-background focus:ring-2 focus:ring-primary/50 transition-all duration-200 rounded-xl h-10 text-foreground placeholder:text-muted-foreground"
+          />
+        </div>
 
         {/* Right Actions */}
         <div className="flex items-center gap-2 md:gap-3 ml-auto">
