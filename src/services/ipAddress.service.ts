@@ -8,7 +8,7 @@ export class IPAddressService {
   private static instance: IPAddressService;
   private static readonly IP_CACHE_KEY = 'welcomeWinks_userIP';
   private static readonly IP_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
-  
+
   public static getInstance(): IPAddressService {
     if (!IPAddressService.instance) {
       IPAddressService.instance = new IPAddressService();
@@ -29,10 +29,10 @@ export class IPAddressService {
 
       // Fetch from external service
       const ip = await this.fetchIPFromService();
-      
+
       // Cache the result
       this.cacheIP(ip);
-      
+
       return ip;
     } catch (error) {
       console.warn('Failed to get IP address:', error);
@@ -46,7 +46,7 @@ export class IPAddressService {
   private async fetchIPFromService(): Promise<string> {
     const services = [
       'https://api.ipify.org?format=json',
-      'https://ipapi.co/json/',
+      // 'https://ipapi.co/json/', // Often blocks CORS or has strict rate limits
       'https://httpbin.org/ip'
     ];
 
@@ -64,10 +64,10 @@ export class IPAddressService {
         }
 
         const data = await response.json();
-        
+
         // Different services return IP in different formats
         const ip = data.ip || data.query || data.origin?.split(' ')[0];
-        
+
         if (ip && this.isValidIPAddress(ip)) {
           return ip;
         }
@@ -131,10 +131,10 @@ export class IPAddressService {
 
     // IPv4 validation
     const ipv4Regex = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
-    
+
     // IPv6 validation (basic)
     const ipv6Regex = /^(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$/;
-    
+
     // IPv6 compressed format
     const ipv6CompressedRegex = /^(([0-9a-fA-F]{1,4}:)*)?::([0-9a-fA-F]{1,4}:)*[0-9a-fA-F]{1,4}$/;
 
@@ -180,7 +180,7 @@ export class IPAddressService {
     if (ip1.includes('.') && ip2.includes('.')) {
       const parts1 = ip1.split('.');
       const parts2 = ip2.split('.');
-      
+
       if (parts1.length === 4 && parts2.length === 4) {
         return parts1.slice(0, 3).join('.') === parts2.slice(0, 3).join('.');
       }
@@ -190,7 +190,7 @@ export class IPAddressService {
     if (ip1.includes(':') && ip2.includes(':')) {
       const parts1 = ip1.split(':');
       const parts2 = ip2.split(':');
-      
+
       if (parts1.length >= 4 && parts2.length >= 4) {
         return parts1.slice(0, 4).join(':') === parts2.slice(0, 4).join(':');
       }
@@ -210,7 +210,7 @@ export class IPAddressService {
   } | null> {
     try {
       const targetIP = ip || await this.getCurrentIPAddress();
-      
+
       if (targetIP === '0.0.0.0') {
         return null;
       }
@@ -224,7 +224,7 @@ export class IPAddressService {
       }
 
       const data = await response.json();
-      
+
       return {
         country: data.country_name,
         region: data.region,
@@ -283,13 +283,13 @@ export class IPAddressService {
       // Simple hash function for IP + salt
       const combined = `${ip}:${salt}`;
       let hash = 0;
-      
+
       for (let i = 0; i < combined.length; i++) {
         const char = combined.charCodeAt(i);
         hash = ((hash << 5) - hash) + char;
         hash = hash & hash; // Convert to 32-bit integer
       }
-      
+
       return Math.abs(hash).toString(36);
     } catch (error) {
       throw createFirestoreError('generateIPHash', error, { ip, salt });

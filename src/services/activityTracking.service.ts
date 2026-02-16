@@ -44,7 +44,12 @@ export class ActivityTrackingService {
 
       // Set new timer to batch activity updates
       this.activityTimer = setTimeout(async () => {
-        await this.updateUserActivity(userId, activityType);
+        try {
+          await this.updateUserActivity(userId, activityType);
+        } catch (err) {
+          // TASKS-SAFE: Activity tracking is non-critical. Do not crash the app.
+          console.warn('Background activity tracking failed (non-fatal):', err);
+        }
       }, 1000); // 1 second delay to batch rapid activities
 
     } catch (error) {
