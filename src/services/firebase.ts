@@ -8,13 +8,13 @@ import { validateFirebaseConfig } from '../utils/firebase-errors';
 validateFirebaseConfig();
 
 const firebaseConfig = {
-  apiKey: "AIzaSyAPnk2vv6Ttf8fr1GQCg18_YmTXmU7YHpM",
-  authDomain: "welcome-winks.firebaseapp.com",
-  projectId: "welcome-winks",
-  storageBucket: "welcome-winks.firebasestorage.app",
-  messagingSenderId: "969280247510",
-  appId: "1:969280247510:web:3df9c199c5e9f2be859b77",
-  measurementId: "G-VMTMMP4LLR"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
 // Initialize Firebase
