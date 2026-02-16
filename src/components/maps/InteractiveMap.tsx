@@ -239,7 +239,28 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
     mapRef.current = null;
   }, []);
 
-  if (!window.google?.maps) {
+  // Ensure the Map constructor is actually available before rendering (prevents crash on restricted keys)
+  const isMapsValid = React.useMemo(() => {
+    return typeof window !== 'undefined' &&
+      window.google?.maps &&
+      typeof window.google.maps.Map === 'function';
+  }, []);
+
+  if (!isMapsValid) {
+    // If google.maps exists but Map is strictly not a function, it usually means the Key is restricted/blocked
+    if (typeof window !== 'undefined' && window.google?.maps) {
+      return (
+        <div className="w-full bg-muted flex flex-col items-center justify-center text-center p-4 border border-destructive/20 rounded-md" style={{ height }}>
+          <p className="font-bold text-destructive mb-1">Map Configuration Error</p>
+          <p className="text-sm text-muted-foreground mb-4 max-w-[250px]">
+            The Google Maps API blocked this request. Check API Key restrictions.
+          </p>
+          <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
+            Retry
+          </Button>
+        </div>
+      );
+    }
     return <Skeleton className="w-full" style={{ height }} />;
   }
 
