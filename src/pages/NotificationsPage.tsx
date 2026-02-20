@@ -42,65 +42,18 @@ const NotificationsPage: React.FC = () => {
       const timeoutId = setTimeout(() => {
         requestPermission();
       }, 500);
-      
+
       return () => clearTimeout(timeoutId);
     }
   }, [userProfile?.userId, requestPermission]);
 
   const handleNotificationClick = useCallback(async (notification: any) => {
     await markAsRead(notification.id);
-    
+
     if (notification.actionUrl) {
       navigate(notification.actionUrl);
     }
   }, [markAsRead, navigate]);
-
-  const createTestNotification = useCallback(async () => {
-    if (!userProfile?.userId) {
-      toast({
-        title: "Error",
-        description: "Please sign in to test notifications",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    // Debug logging
-    console.log('🔍 Debug notification creation:');
-    console.log('User Profile:', userProfile);
-    console.log('User ID:', userProfile.userId);
-    console.log('User ID type:', typeof userProfile.userId);
-    console.log('User ID length:', userProfile.userId?.length);
-    console.log('Is valid cookie ID:', userProfile.userId?.startsWith('cookie_'));
-    
-    try {
-      // Create a test notification
-      await notificationService.createNotification(
-        userProfile.userId,
-        'system',
-        'Test Notification',
-        'This is a test notification to verify the system is working correctly!',
-        { test: true },
-        '/notifications',
-        'View Notifications'
-      );
-      
-      // Refresh notifications to show the new one
-      await refreshNotifications();
-      
-      toast({
-        title: "Test Notification Created",
-        description: "Check your notifications list to see the test notification",
-      });
-    } catch (error) {
-      console.error('Failed to create test notification:', error);
-      toast({
-        title: "Error",
-        description: `Failed to create test notification: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        variant: "destructive"
-      });
-    }
-  }, [userProfile?.userId, refreshNotifications, toast]);
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
@@ -182,7 +135,7 @@ const NotificationsPage: React.FC = () => {
               <Settings className="h-4 w-4" />
             </Button>
           </div>
-          
+
           {/* Action Buttons - Mobile Optimized */}
           <div className="flex flex-wrap gap-2">
             <Button
@@ -217,15 +170,7 @@ const NotificationsPage: React.FC = () => {
                 Delete all
               </Button>
             )}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={createTestNotification}
-              disabled={isLoading}
-              className="text-xs px-2 py-1 h-7"
-            >
-              Test Notification
-            </Button>
+
           </div>
         </div>
 
@@ -242,7 +187,7 @@ const NotificationsPage: React.FC = () => {
               {!isNotificationSupported && (
                 <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                   <p className="text-sm text-yellow-800">
-                    Browser notifications are not supported or enabled. 
+                    Browser notifications are not supported or enabled.
                     <Button
                       variant="link"
                       size="sm"
@@ -266,7 +211,7 @@ const NotificationsPage: React.FC = () => {
                     </div>
                     <Switch
                       checked={preferences.newBusinessesNearby}
-                      onCheckedChange={(checked) => 
+                      onCheckedChange={(checked) =>
                         updatePreferences({ newBusinessesNearby: checked })
                       }
                     />
@@ -283,7 +228,7 @@ const NotificationsPage: React.FC = () => {
                     </div>
                     <Switch
                       checked={preferences.scoreUpdates}
-                      onCheckedChange={(checked) => 
+                      onCheckedChange={(checked) =>
                         updatePreferences({ scoreUpdates: checked })
                       }
                     />
@@ -300,7 +245,7 @@ const NotificationsPage: React.FC = () => {
                     </div>
                     <Switch
                       checked={preferences.communityActivity}
-                      onCheckedChange={(checked) => 
+                      onCheckedChange={(checked) =>
                         updatePreferences({ communityActivity: checked })
                       }
                     />
@@ -317,7 +262,7 @@ const NotificationsPage: React.FC = () => {
                     </div>
                     <Switch
                       checked={preferences.achievements}
-                      onCheckedChange={(checked) => 
+                      onCheckedChange={(checked) =>
                         updatePreferences({ achievements: checked })
                       }
                     />
@@ -334,7 +279,7 @@ const NotificationsPage: React.FC = () => {
                     </div>
                     <Switch
                       checked={preferences.systemUpdates}
-                      onCheckedChange={(checked) => 
+                      onCheckedChange={(checked) =>
                         updatePreferences({ systemUpdates: checked })
                       }
                     />
@@ -379,13 +324,13 @@ const NotificationsPage: React.FC = () => {
                 <BellOff className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                 <h3 className="font-medium mb-2">No notifications yet</h3>
                 <p className="text-sm text-muted-foreground mb-4">
-                  {isNotificationSupported 
+                  {isNotificationSupported
                     ? "We'll notify you about nearby business ratings, score updates, and achievements you earn."
                     : "Enable browser notifications to receive updates about nearby business activity and achievements."
                   }
                 </p>
                 {!isNotificationSupported && (
-                  <Button 
+                  <Button
                     onClick={requestPermission}
                     variant="outline"
                     size="sm"
@@ -397,8 +342,8 @@ const NotificationsPage: React.FC = () => {
             </Card>
           ) : (
             notifications.map((notification) => (
-              <Card 
-                key={notification.id} 
+              <Card
+                key={notification.id}
                 className={cn(
                   "glass border-border interactive-scale transition-all",
                   !notification.read && "ring-1 ring-primary/20 bg-primary/5"
@@ -411,7 +356,7 @@ const NotificationsPage: React.FC = () => {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-2">
-                        <div 
+                        <div
                           className="flex-1 cursor-pointer"
                           onClick={() => handleNotificationClick(notification)}
                         >

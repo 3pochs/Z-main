@@ -34,46 +34,40 @@ async function retryWithBackoff<T>(
     }
 
     console.warn(`Operation failed, retrying in ${delay}ms... (${retries} retries left)`);
-    
+
     await new Promise(resolve => setTimeout(resolve, delay));
-    
+
     return retryWithBackoff(operation, retries - 1, delay * RETRY_BACKOFF_MULTIPLIER);
   }
 }
 
-/**
- * Convert DiningPreferences to a Firestore-compatible format
- * (converts Date objects to timestamps)
- */
 function serializeDiningPreferences(preferences: DiningPreferences): any {
   return {
     ...preferences,
     learningData: {
-      ...preferences.learningData,
-      ratedBusinesses: preferences.learningData.ratedBusinesses.map(item => ({
+      ...(preferences.learningData || {}),
+      ratedBusinesses: (preferences.learningData?.ratedBusinesses || []).map(item => ({
         ...item,
-        timestamp: item.timestamp.toISOString(),
+        timestamp: item.timestamp instanceof Date ? item.timestamp.toISOString() : item.timestamp,
       })),
     },
   };
 }
 
-/**
- * Convert Firestore data back to DiningPreferences format
- * (converts timestamp strings back to Date objects)
- */
 function deserializeDiningPreferences(data: any): DiningPreferences {
   if (!data) {
     return DEFAULT_DINING_PREFERENCES;
   }
 
   return {
+    ...DEFAULT_DINING_PREFERENCES,
     ...data,
     learningData: {
-      ...data.learningData,
+      ...DEFAULT_DINING_PREFERENCES.learningData,
+      ...(data.learningData || {}),
       ratedBusinesses: (data.learningData?.ratedBusinesses || []).map((item: any) => ({
         ...item,
-        timestamp: new Date(item.timestamp),
+        timestamp: typeof item.timestamp === 'string' ? new Date(item.timestamp) : (item.timestamp || new Date()),
       })),
     },
   };
@@ -99,12 +93,12 @@ export async function saveDiningPreferences(
   try {
     await retryWithBackoff(async () => {
       const userDocRef = doc(db, USERS_COLLECTION, userId);
-      
+
       // Check if document exists
       const userDoc = await getDoc(userDocRef);
-      
+
       const serializedPreferences = serializeDiningPreferences(preferences);
-      
+
       if (userDoc.exists()) {
         // Update existing document
         await updateDoc(userDocRef, {
@@ -157,7 +151,7 @@ export async function loadDiningPreferences(userId: string): Promise<DiningPrefe
       }
 
       const data = userDoc.data();
-      
+
       if (!data.diningPreferences) {
         console.log('No dining preferences in user document, returning defaults');
         return DEFAULT_DINING_PREFERENCES;

@@ -8,7 +8,7 @@ import { WelcomeWinksLogo } from '@/components/ui/WelcomeWinksLogo';
 const navItems = [
   { icon: Home, label: 'Home', path: '/' },
   { icon: Search, label: 'Explore', path: '/explore' },
-  { icon: Plus, label: 'Mark a Place', path: '/mark', isPrimary: true },
+  { icon: Plus, label: 'Wink at a Place', path: '/mark', isPrimary: true },
   { icon: Bell, label: 'Notifications', path: '/notifications' },
   { icon: User, label: 'Profile', path: '/profile' },
 ];

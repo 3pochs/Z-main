@@ -162,7 +162,10 @@ export const PlacesSearchBar: React.FC<PlacesSearchBarProps> = ({
                   <div
                     key={suggestion.place_id || index}
                     className="p-3 hover:bg-accent/50 rounded-lg cursor-pointer transition-colors"
-                    onClick={() => handleSuggestionClick(suggestion)}
+                    onMouseDown={(e) => {
+                      e.preventDefault(); // Prevent input blur before click registers
+                      handleSuggestionClick(suggestion);
+                    }}
                   >
                     <div className="flex items-start gap-3">
                       <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />

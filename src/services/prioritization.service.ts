@@ -1,4 +1,4 @@
-import { DiningPreferences, DEFAULT_CATEGORY_WEIGHTS, IMPORTANCE_MULTIPLIERS } from '../types/preferences';
+import { DiningPreferences, DEFAULT_CATEGORY_WEIGHTS, IMPORTANCE_MULTIPLIERS, DEFAULT_DINING_PREFERENCES } from '../types/preferences';
 import { BusinessAttributes, RelevanceScore } from '../types/businessAttributes';
 
 /**
@@ -11,13 +11,16 @@ import { BusinessAttributes, RelevanceScore } from '../types/businessAttributes'
  */
 export function calculateCuisineScore(
   businessCuisines: string[],
-  preferences: DiningPreferences['cuisines']
+  preferences: DiningPreferences['cuisines'] | undefined
 ): number {
+  const preferred = preferences?.preferred || [];
+  const disliked = preferences?.disliked || [];
+
   // If business is in disliked list, score is 0
   const hasDisliked = businessCuisines.some(cuisine =>
-    preferences.disliked.some(disliked =>
-      cuisine.toLowerCase().includes(disliked.toLowerCase()) ||
-      disliked.toLowerCase().includes(cuisine.toLowerCase())
+    disliked.some(d =>
+      cuisine.toLowerCase().includes(d.toLowerCase()) ||
+      d.toLowerCase().includes(cuisine.toLowerCase())
     )
   );
 
@@ -26,7 +29,7 @@ export function calculateCuisineScore(
   }
 
   // If no preferences set, return neutral score
-  if (preferences.preferred.length === 0) {
+  if (preferred.length === 0) {
     return 75; // Higher neutral score to not penalize when no preference
   }
 
@@ -37,15 +40,15 @@ export function calculateCuisineScore(
 
   // Calculate exact matches
   const exactMatches = businessCuisines.filter(cuisine =>
-    preferences.preferred.some(preferred =>
-      cuisine.toLowerCase().includes(preferred.toLowerCase()) ||
-      preferred.toLowerCase().includes(cuisine.toLowerCase())
+    preferred.some(p =>
+      cuisine.toLowerCase().includes(p.toLowerCase()) ||
+      p.toLowerCase().includes(cuisine.toLowerCase())
     )
   ).length;
 
   if (exactMatches > 0) {
     // Has exact matches: scale from 75-100 based on match count
-    const matchRatio = Math.min(exactMatches / preferences.preferred.length, 1);
+    const matchRatio = Math.min(exactMatches / preferred.length, 1);
     return 75 + (matchRatio * 25);
   }
 
@@ -59,7 +62,7 @@ export function calculateCuisineScore(
 
   let hasRelatedMatch = false;
   for (const [group, cuisines] of Object.entries(relatedCuisineGroups)) {
-    const preferredInGroup = preferences.preferred.some(p =>
+    const preferredInGroup = preferred.some(p =>
       cuisines.some(c => p.toLowerCase().includes(c) || c.includes(p.toLowerCase()))
     );
     const businessInGroup = businessCuisines.some(b =>
@@ -88,14 +91,15 @@ export function calculateCuisineScore(
  */
 export function calculatePriceScore(
   businessPriceLevel: number | null,
-  preferences: DiningPreferences['priceRange']
+  preferences: DiningPreferences['priceRange'] | undefined
 ): number {
   // If no price data available, return neutral score
-  if (businessPriceLevel === null) {
+  if (businessPriceLevel === null || !preferences) {
     return 50;
   }
 
-  const { min, max } = preferences;
+  const min = preferences.min ?? 1;
+  const max = preferences.max ?? 4;
 
   // Within range: 100
   if (businessPriceLevel >= min && businessPriceLevel <= max) {
@@ -124,10 +128,12 @@ export function calculatePriceScore(
  */
 export function calculateDietaryScore(
   businessDietaryOptions: string[],
-  preferences: DiningPreferences['dietary']
+  preferences: DiningPreferences['dietary'] | undefined
 ): number {
+  const restrictions = preferences?.restrictions || [];
+
   // If no dietary restrictions specified, return perfect score
-  if (preferences.restrictions.length === 0) {
+  if (restrictions.length === 0) {
     return 100;
   }
 
@@ -137,7 +143,7 @@ export function calculateDietaryScore(
   }
 
   // Calculate how many restrictions are met
-  const metRestrictions = preferences.restrictions.filter(restriction =>
+  const metRestrictions = restrictions.filter(restriction =>
     businessDietaryOptions.some(option =>
       option.toLowerCase().includes(restriction.toLowerCase()) ||
       restriction.toLowerCase().includes(option.toLowerCase())
@@ -145,7 +151,7 @@ export function calculateDietaryScore(
   ).length;
 
   // Return proportional score
-  return (metRestrictions / preferences.restrictions.length) * 100;
+  return (metRestrictions / restrictions.length) * 100;
 }
 
 /**
@@ -156,10 +162,12 @@ export function calculateDietaryScore(
  */
 export function calculateAmbianceScore(
   businessAmbianceTags: string[],
-  preferences: DiningPreferences['ambiance']
+  preferences: DiningPreferences['ambiance'] | undefined
 ): number {
+  const preferred = preferences?.preferred || [];
+
   // If no ambiance preferences set, return perfect score
-  if (preferences.preferred.length === 0) {
+  if (preferred.length === 0) {
     return 100;
   }
 
@@ -170,9 +178,9 @@ export function calculateAmbianceScore(
 
   // Check for matches
   const hasMatch = businessAmbianceTags.some(tag =>
-    preferences.preferred.some(preferred =>
-      tag.toLowerCase().includes(preferred.toLowerCase()) ||
-      preferred.toLowerCase().includes(tag.toLowerCase())
+    preferred.some(p =>
+      tag.toLowerCase().includes(p.toLowerCase()) ||
+      p.toLowerCase().includes(tag.toLowerCase())
     )
   );
 
@@ -189,14 +197,14 @@ export function calculateAmbianceScore(
  */
 export function calculateDistanceScore(
   distanceInMiles: number | undefined,
-  preferences: DiningPreferences['distance']
+  preferences: DiningPreferences['distance'] | undefined
 ): number {
   // If no distance data available, return neutral score
-  if (distanceInMiles === undefined) {
+  if (distanceInMiles === undefined || !preferences) {
     return 50;
   }
 
-  const { maxDistance } = preferences;
+  const maxDistance = preferences.maxDistance ?? 10;
 
   // Beyond max distance
   if (distanceInMiles > maxDistance) {
@@ -230,12 +238,12 @@ export function calculateDistanceScore(
 export function calculateRatingScore(
   googleRating: number | undefined,
   winksScore: number | undefined,
-  preferences: DiningPreferences
+  preferences: DiningPreferences | undefined
 ): number {
-  const { minRating } = preferences.rating;
-  const { politicalView } = preferences;
+  const minRating = preferences?.rating?.minRating ?? 0;
+  const politicalView = preferences?.politicalView ?? 'none';
 
-  let effectiveMinWinksScore = preferences.rating.minWinksScore;
+  let effectiveMinWinksScore = preferences?.rating?.minWinksScore ?? null;
   if (politicalView === 'conservative') {
     effectiveMinWinksScore = 30; // Prioritize mid to lower WW ratings
   } else if (politicalView === 'liberal') {
@@ -285,10 +293,12 @@ export function calculateRatingScore(
  */
 export function calculateFeaturesScore(
   businessFeatures: string[],
-  preferences: DiningPreferences['features']
+  preferences: DiningPreferences['features'] | undefined
 ): number {
+  const preferred = preferences?.preferred || [];
+
   // If no feature preferences set, return perfect score
-  if (preferences.preferred.length === 0) {
+  if (preferred.length === 0) {
     return 100;
   }
 
@@ -298,7 +308,7 @@ export function calculateFeaturesScore(
   }
 
   // Calculate how many preferred features are available
-  const availableFeatures = preferences.preferred.filter(feature =>
+  const availableFeatures = preferred.filter(feature =>
     businessFeatures.some(businessFeature =>
       businessFeature.toLowerCase().includes(feature.toLowerCase()) ||
       feature.toLowerCase().includes(businessFeature.toLowerCase())
@@ -306,7 +316,7 @@ export function calculateFeaturesScore(
   ).length;
 
   // Return proportional score
-  return (availableFeatures / preferences.preferred.length) * 100;
+  return (availableFeatures / preferred.length) * 100;
 }
 
 export const CHAIN_NAMES = [
@@ -451,22 +461,22 @@ export function calculateRelevanceScore(
 
   // Apply importance multipliers and category weights
   const weightedCuisineScore =
-    (cuisineScore * categoryWeights.cuisine * getImportanceMultiplier(preferences.cuisines.importance)) / 100;
+    (cuisineScore * categoryWeights.cuisine * getImportanceMultiplier(preferences.cuisines?.importance || 'medium')) / 100;
 
   const weightedPriceScore =
-    (priceScore * categoryWeights.price * getImportanceMultiplier(preferences.priceRange.importance)) / 100;
+    (priceScore * categoryWeights.price * getImportanceMultiplier(preferences.priceRange?.importance || 'medium')) / 100;
 
   const weightedDietaryScore =
-    (dietaryScore * categoryWeights.dietary * getImportanceMultiplier(preferences.dietary.importance)) / 100;
+    (dietaryScore * categoryWeights.dietary * getImportanceMultiplier(preferences.dietary?.importance || 'medium')) / 100;
 
   const weightedAmbianceScore =
-    (ambianceScore * categoryWeights.ambiance * getImportanceMultiplier(preferences.ambiance.importance)) / 100;
+    (ambianceScore * categoryWeights.ambiance * getImportanceMultiplier(preferences.ambiance?.importance || 'medium')) / 100;
 
   const weightedDistanceScore =
-    (distanceScore * categoryWeights.distance * getImportanceMultiplier(preferences.distance.importance)) / 100;
+    (distanceScore * categoryWeights.distance * getImportanceMultiplier(preferences.distance?.importance || 'medium')) / 100;
 
   const weightedFeaturesScore =
-    (featuresScore * categoryWeights.features * getImportanceMultiplier(preferences.features.importance)) / 100;
+    (featuresScore * categoryWeights.features * getImportanceMultiplier(preferences.features?.importance || 'medium')) / 100;
 
   // Calculate preference match score (without ratings)
   const preferenceMatchScore =
@@ -496,25 +506,25 @@ export function calculateRelevanceScore(
 
   // Check each category (threshold of 60 for "matched")
   if (cuisineScore >= 60) matchedPreferences.push('cuisine');
-  else if (preferences.cuisines.preferred.length > 0) unmatchedPreferences.push('cuisine');
+  else if ((preferences.cuisines?.preferred || []).length > 0) unmatchedPreferences.push('cuisine');
 
   if (priceScore >= 60) matchedPreferences.push('price');
-  else if (preferences.priceRange.min > 1 || preferences.priceRange.max < 4) unmatchedPreferences.push('price');
+  else if ((preferences.priceRange?.min ?? 1) > 1 || (preferences.priceRange?.max ?? 4) < 4) unmatchedPreferences.push('price');
 
   if (dietaryScore >= 60) matchedPreferences.push('dietary');
-  else if (preferences.dietary.restrictions.length > 0) unmatchedPreferences.push('dietary');
+  else if ((preferences.dietary?.restrictions || []).length > 0) unmatchedPreferences.push('dietary');
 
   if (ambianceScore >= 60) matchedPreferences.push('ambiance');
-  else if (preferences.ambiance.preferred.length > 0) unmatchedPreferences.push('ambiance');
+  else if ((preferences.ambiance?.preferred || []).length > 0) unmatchedPreferences.push('ambiance');
 
   if (distanceScore >= 60) matchedPreferences.push('distance');
-  else if (preferences.distance.maxDistance < 10) unmatchedPreferences.push('distance');
+  else if ((preferences.distance?.maxDistance ?? 10) < 10) unmatchedPreferences.push('distance');
 
   if (ratingScore >= 60) matchedPreferences.push('rating');
-  else if (preferences.rating.minRating > 0 || preferences.rating.minWinksScore !== null) unmatchedPreferences.push('rating');
+  else if ((preferences.rating?.minRating ?? 0) > 0 || preferences.rating?.minWinksScore !== null) unmatchedPreferences.push('rating');
 
   if (featuresScore >= 60) matchedPreferences.push('features');
-  else if (preferences.features.preferred.length > 0) unmatchedPreferences.push('features');
+  else if ((preferences.features?.preferred || []).length > 0) unmatchedPreferences.push('features');
 
   return {
     businessId: '', // Will be set by caller
@@ -551,17 +561,20 @@ export interface BusinessWithScore {
  */
 function meetsCuisineMustHaves(
   businessCuisines: string[],
-  preferences: DiningPreferences['cuisines']
+  preferences: DiningPreferences['cuisines'] | undefined
 ): boolean {
-  if (preferences.importance !== 'must-have') {
+  if (preferences?.importance !== 'must-have') {
     return true;
   }
 
+  const disliked = preferences.disliked || [];
+  const preferred = preferences.preferred || [];
+
   // Must not be in disliked list
   const hasDisliked = businessCuisines.some(cuisine =>
-    preferences.disliked.some(disliked =>
-      cuisine.toLowerCase().includes(disliked.toLowerCase()) ||
-      disliked.toLowerCase().includes(cuisine.toLowerCase())
+    disliked.some(d =>
+      cuisine.toLowerCase().includes(d.toLowerCase()) ||
+      d.toLowerCase().includes(cuisine.toLowerCase())
     )
   );
 
@@ -570,14 +583,14 @@ function meetsCuisineMustHaves(
   }
 
   // Must have at least one preferred cuisine
-  if (preferences.preferred.length === 0) {
+  if (preferred.length === 0) {
     return true;
   }
 
   return businessCuisines.some(cuisine =>
-    preferences.preferred.some(preferred =>
-      cuisine.toLowerCase().includes(preferred.toLowerCase()) ||
-      preferred.toLowerCase().includes(cuisine.toLowerCase())
+    preferred.some(p =>
+      cuisine.toLowerCase().includes(p.toLowerCase()) ||
+      p.toLowerCase().includes(cuisine.toLowerCase())
     )
   );
 }
@@ -587,9 +600,9 @@ function meetsCuisineMustHaves(
  */
 function meetsPriceMustHaves(
   businessPriceLevel: number | null,
-  preferences: DiningPreferences['priceRange']
+  preferences: DiningPreferences['priceRange'] | undefined
 ): boolean {
-  if (preferences.importance !== 'must-have') {
+  if (preferences?.importance !== 'must-have') {
     return true;
   }
 
@@ -598,7 +611,10 @@ function meetsPriceMustHaves(
     return true;
   }
 
-  return businessPriceLevel >= preferences.min && businessPriceLevel <= preferences.max;
+  const min = preferences.min ?? 1;
+  const max = preferences.max ?? 4;
+
+  return businessPriceLevel >= min && businessPriceLevel <= max;
 }
 
 /**
@@ -606,14 +622,16 @@ function meetsPriceMustHaves(
  */
 function meetsDietaryMustHaves(
   businessDietaryOptions: string[],
-  preferences: DiningPreferences['dietary']
+  preferences: DiningPreferences['dietary'] | undefined
 ): boolean {
-  if (preferences.importance !== 'must-have') {
+  if (preferences?.importance !== 'must-have') {
     return true;
   }
 
+  const restrictions = preferences.restrictions || [];
+
   // If no restrictions specified, pass
-  if (preferences.restrictions.length === 0) {
+  if (restrictions.length === 0) {
     return true;
   }
 
@@ -623,7 +641,7 @@ function meetsDietaryMustHaves(
   }
 
   // All restrictions must be met
-  return preferences.restrictions.every(restriction =>
+  return restrictions.every(restriction =>
     businessDietaryOptions.some(option =>
       option.toLowerCase().includes(restriction.toLowerCase()) ||
       restriction.toLowerCase().includes(option.toLowerCase())
@@ -671,16 +689,16 @@ export function sortByRelevance(businesses: BusinessWithScore[]): BusinessWithSc
  */
 export function hasPreferencesSet(preferences: DiningPreferences): boolean {
   return (
-    preferences.cuisines.preferred.length > 0 ||
-    preferences.cuisines.disliked.length > 0 ||
-    preferences.priceRange.min > 1 ||
-    preferences.priceRange.max < 4 ||
-    preferences.dietary.restrictions.length > 0 ||
-    preferences.ambiance.preferred.length > 0 ||
-    preferences.distance.maxDistance < 10 ||
-    preferences.rating.minRating > 0 ||
-    preferences.rating.minWinksScore !== null ||
-    preferences.features.preferred.length > 0
+    (preferences.cuisines?.preferred || []).length > 0 ||
+    (preferences.cuisines?.disliked || []).length > 0 ||
+    (preferences.priceRange?.min ?? 1) > 1 ||
+    (preferences.priceRange?.max ?? 4) < 4 ||
+    (preferences.dietary?.restrictions || []).length > 0 ||
+    (preferences.ambiance?.preferred || []).length > 0 ||
+    (preferences.distance?.maxDistance ?? 10) < 10 ||
+    (preferences.rating?.minRating ?? 0) > 0 ||
+    (preferences.rating?.minWinksScore !== null && preferences.rating?.minWinksScore !== undefined) ||
+    (preferences.features?.preferred || []).length > 0
   );
 }
 
@@ -691,18 +709,18 @@ export function hasPreferencesSet(preferences: DiningPreferences): boolean {
 export function relaxMustHaves(preferences: DiningPreferences): DiningPreferences {
   return {
     ...preferences,
-    cuisines: {
+    cuisines: preferences.cuisines ? {
       ...preferences.cuisines,
       importance: preferences.cuisines.importance === 'must-have' ? 'high' : preferences.cuisines.importance,
-    },
-    priceRange: {
+    } : DEFAULT_DINING_PREFERENCES.cuisines,
+    priceRange: preferences.priceRange ? {
       ...preferences.priceRange,
       importance: preferences.priceRange.importance === 'must-have' ? 'high' : preferences.priceRange.importance,
-    },
-    dietary: {
+    } : DEFAULT_DINING_PREFERENCES.priceRange,
+    dietary: preferences.dietary ? {
       ...preferences.dietary,
       importance: preferences.dietary.importance === 'must-have' ? 'high' : preferences.dietary.importance,
-    },
+    } : DEFAULT_DINING_PREFERENCES.dietary,
   };
 }
 

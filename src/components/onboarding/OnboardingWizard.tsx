@@ -54,6 +54,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     isCompleted,
     goToNextStep,
     goToPreviousStep,
+    goToStep,
     selectGoal,
     completeOnboardingFlow,
     skipOnboarding,
@@ -236,11 +237,15 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
       console.warn('Failed to track goal selection:', error);
     }
 
-    // Auto-advance to preferences step
+    // Auto-advance based on goal
     setTimeout(() => {
-      goToNextStep();
+      if (goal === 'mark-business') {
+        goToStep('completed');
+      } else {
+        goToNextStep();
+      }
     }, 300);
-  }, [selectGoal, trackActivity, goToNextStep]);
+  }, [selectGoal, trackActivity, goToNextStep, goToStep]);
 
   // Handle preferences setup completion
   const handlePreferencesComplete = useCallback(async (diningPreferences: DiningPreferences) => {

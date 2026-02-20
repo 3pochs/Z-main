@@ -10,15 +10,15 @@ import { Input } from '@/components/ui/input';
 import { ScoreIndicator } from '@/components/business/ScoreIndicator';
 import { ResponseBreakdownChart } from '@/components/charts/ResponseBreakdownChart';
 import { HighlightedText } from '@/components/ui/highlighted-text';
-import { 
-  AlertDialog, 
-  AlertDialogAction, 
-  AlertDialogCancel, 
-  AlertDialogContent, 
-  AlertDialogDescription, 
-  AlertDialogFooter, 
-  AlertDialogHeader, 
-  AlertDialogTitle 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle
 } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -43,7 +43,7 @@ const MarkPage: React.FC = () => {
   const { location } = useLocation();
   const auth = useAuth();
   const { trackBusinessRating } = usePreferencePersistence();
-  
+
   // UI State
   const [currentStep, setCurrentStep] = useState(0);
   const [placeName, setPlaceName] = useState('');
@@ -55,7 +55,7 @@ const MarkPage: React.FC = () => {
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [isConfirmed, setIsConfirmed] = useState(false);
   const [showDisagreeDialog, setShowDisagreeDialog] = useState(false);
-  
+
   // Firebase State
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -64,7 +64,7 @@ const MarkPage: React.FC = () => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [isCheckingExistingRating, setIsCheckingExistingRating] = useState(false);
   const [isFetchingPlaceDetails, setIsFetchingPlaceDetails] = useState(false);
-  
+
   // Memoize places options to prevent infinite loops
   const placesOptions = useMemo(() => ({
     location: location.latitude && location.longitude ? {
@@ -75,14 +75,14 @@ const MarkPage: React.FC = () => {
     radius: 5000 // 5km radius for local suggestions
   }), [location.latitude, location.longitude]);
 
-  const { 
-    suggestions, 
-    loading: placesLoading, 
-    error: placesError, 
-    searchPlaces, 
-    clearSuggestions 
+  const {
+    suggestions,
+    loading: placesLoading,
+    error: placesError,
+    searchPlaces,
+    clearSuggestions
   } = usePlacesAutocomplete(placesOptions);
-  
+
   // Registration prompt logic
   const {
     showPrompt,
@@ -111,33 +111,33 @@ const MarkPage: React.FC = () => {
         existingRating: routerLocation.state?.existingRating,
         fullState: routerLocation.state
       });
-      
+
       // Debug: Check what's in the router state
       console.log('🔍 ROUTER STATE DEBUG:', {
         hasExistingRating: !!routerLocation.state?.existingRating,
         existingRating: routerLocation.state?.existingRating,
         fullState: routerLocation.state
       });
-      
+
       setPlaceName(routerLocation.state.placeName);
       setSelectedPlace(routerLocation.state.placeData);
-      
+
       // Check if we're editing an existing rating
       if (routerLocation.state?.existingRating) {
         console.log('🔄 EDIT MODE: Received existing rating from BusinessPage:', routerLocation.state.existingRating);
         setExistingRating(routerLocation.state.existingRating);
         setIsEditMode(true);
         setHasExistingRating(true);
-        
+
         // Pre-populate answers from existing rating
         const existingAnswers: Record<string, number> = {};
         const responses = routerLocation.state.existingRating.responses;
-        
+
         // Convert Firebase responses back to UI format
         Object.entries(responses).forEach(([key, value]) => {
           existingAnswers[key] = value as number;
         });
-        
+
         setAnswers(existingAnswers);
         console.log('✅ EDIT MODE ACTIVATED from BusinessPage:', {
           isEditMode: true,
@@ -147,37 +147,37 @@ const MarkPage: React.FC = () => {
         });
       } else {
         console.log('ℹ️ No existing rating passed from BusinessPage - checking as fallback...');
-        
+
         // Fallback: Check for existing rating even if not passed from BusinessPage
         const checkFallbackRating = async () => {
           const currentAccount = auth.getCurrentAccount();
           if (currentAccount.type === 'none') return;
-          
-          const userId = currentAccount.type === 'full' 
-            ? (currentAccount.data as any)?.uid 
+
+          const userId = currentAccount.type === 'full'
+            ? (currentAccount.data as any)?.uid
             : (currentAccount.data as any)?.cookieId;
-          
+
           if (!userId || !routerLocation.state.placeData.place_id) return;
-          
+
           console.log('🔍 FALLBACK: Checking for existing rating...', { userId, placeId: routerLocation.state.placeData.place_id });
           try {
             const fallbackRating = await ratingsService.getUserRatingForBusiness(
-              routerLocation.state.placeData.place_id, 
+              routerLocation.state.placeData.place_id,
               userId
             );
-            
+
             if (fallbackRating) {
               console.log('🔄 FALLBACK EDIT MODE: Found existing rating:', fallbackRating);
               setExistingRating(fallbackRating);
               setIsEditMode(true);
               setHasExistingRating(true);
-              
+
               // Pre-populate answers
               const existingAnswers: Record<string, number> = {};
               Object.entries(fallbackRating.responses).forEach(([key, value]) => {
                 existingAnswers[key] = value as number;
               });
-              
+
               setAnswers(existingAnswers);
               console.log('✅ FALLBACK EDIT MODE ACTIVATED:', {
                 isEditMode: true,
@@ -191,10 +191,10 @@ const MarkPage: React.FC = () => {
             console.warn('❌ Fallback rating check failed:', error);
           }
         };
-        
+
         checkFallbackRating();
       }
-      
+
       setCurrentStep(1); // Skip to the first question
     }
   }, [routerLocation.state]);
@@ -214,47 +214,47 @@ const MarkPage: React.FC = () => {
     const checkExistingRating = async () => {
       console.log('🔍 checkExistingRating called with selectedPlace:', selectedPlace?.place_id);
       if (!selectedPlace?.place_id) return;
-      
+
       const currentAccount = auth.getCurrentAccount();
-      
+
       // Only check if user has an account (don't create one just for checking)
       if (currentAccount.type === 'none') return;
-      
-      const userId = currentAccount.type === 'full' 
-        ? (currentAccount.data as any)?.uid 
+
+      const userId = currentAccount.type === 'full'
+        ? (currentAccount.data as any)?.uid
         : (currentAccount.data as any)?.cookieId;
-      
+
       if (!userId) return;
-      
-      console.log('🔍 CHECKING EXISTING RATING:', { 
-        placeId: selectedPlace.place_id, 
-        userId, 
-        accountType: currentAccount.type 
+
+      console.log('🔍 CHECKING EXISTING RATING:', {
+        placeId: selectedPlace.place_id,
+        userId,
+        accountType: currentAccount.type
       });
-      
+
       setIsCheckingExistingRating(true);
       try {
         const existingRatingData = await ratingsService.getUserRatingForBusiness(
-          selectedPlace.place_id, 
+          selectedPlace.place_id,
           userId
         );
-        
+
         if (existingRatingData) {
           console.log('✅ Found existing rating:', existingRatingData);
           console.log('🔧 Setting edit mode states...');
           setHasExistingRating(true);
           setExistingRating(existingRatingData);
           setIsEditMode(true);
-          
+
           // Pre-populate answers from existing rating
           const existingAnswers: Record<string, number> = {};
           const responses = existingRatingData.responses;
-          
+
           // Convert Firebase responses to UI format
           Object.entries(responses).forEach(([key, value]) => {
             existingAnswers[key] = value as number;
           });
-          
+
           setAnswers(existingAnswers);
           console.log('✅ Edit mode activated:', {
             hasExistingRating: true,
@@ -280,10 +280,10 @@ const MarkPage: React.FC = () => {
 
   const handleSuggestionClick = async (suggestion: any) => {
     console.log('Suggestion clicked:', suggestion);
-    
+
     // Set the display name to the business name, not the full address
     setPlaceName(suggestion.name || suggestion.formatted_address);
-    
+
     // If this is just an autocomplete result, we need to fetch full place details
     if (!suggestion.geometry && suggestion.place_id) {
       setIsFetchingPlaceDetails(true);
@@ -292,7 +292,7 @@ const MarkPage: React.FC = () => {
         if (window.google) {
           const dummyDiv = document.createElement('div');
           const service = new google.maps.places.PlacesService(dummyDiv);
-          
+
           const request: google.maps.places.PlaceDetailsRequest = {
             placeId: suggestion.place_id,
             fields: ['name', 'formatted_address', 'geometry', 'place_id', 'vicinity', 'rating', 'user_ratings_total', 'types', 'website', 'formatted_phone_number', 'photos'],
@@ -322,14 +322,14 @@ const MarkPage: React.FC = () => {
       console.log('Using suggestion directly:', suggestion);
       setSelectedPlace(suggestion);
     }
-    
+
     // Clear suggestions after selection
     clearSuggestions();
   };
-  
+
   const progress = ((currentStep) / (surveyQuestions.length + 1)) * 100;
-  const currentQuestion = surveyQuestions[currentStep -1];
-  
+  const currentQuestion = surveyQuestions[currentStep - 1];
+
   // Debug: Log current question info
   console.log('Current question:', {
     step: currentStep,
@@ -355,13 +355,13 @@ const MarkPage: React.FC = () => {
       "-1": DEFAULT_RESPONSE_VALUES.probablyNot, // Probably Not
       "-2": DEFAULT_RESPONSE_VALUES.no         // No
     };
-    
+
     const mappedValue = responseValueMap[responseValue as keyof typeof responseValueMap];
-    
+
     // For reverse-scored questions, invert the scoring:
     // Yes (0.833) becomes No (0.0), No (0.0) becomes Yes (0.833), etc.
     const calculatedScore = isNormal ? mappedValue : (DEFAULT_RESPONSE_VALUES.yes - mappedValue);
-    
+
     // Debug logging
     console.log('Answer Debug:', {
       questionId,
@@ -373,7 +373,7 @@ const MarkPage: React.FC = () => {
       reverseScored: currentQuestion.reverseScored,
       currentQuestionId: currentQuestion.id
     });
-    
+
     setAnswers(prev => {
       const newAnswers = { ...prev, [questionId]: calculatedScore };
       console.log('Updated answers state:', newAnswers);
@@ -391,7 +391,7 @@ const MarkPage: React.FC = () => {
   const calculateAndSetFinalScore = () => {
     console.log('Calculating final score. Selected place:', selectedPlace);
     console.log('Answers:', answers);
-    
+
     // Safety check - ensure we have a selected place
     if (!selectedPlace || (!selectedPlace.place_id && !selectedPlace.name)) {
       console.error('No valid place selected when calculating score');
@@ -399,11 +399,11 @@ const MarkPage: React.FC = () => {
       setCurrentStep(0);
       return;
     }
-    
+
     const rawTotalScore = Object.values(answers).reduce((acc, val) => acc + val, 0);
     const totalScore = Math.min(rawTotalScore, 5.0); // Cap at 5.0 to handle any edge cases
     console.log('Calculated total score:', totalScore, '(raw:', rawTotalScore, ')');
-    
+
     // Debug: Log each answer individually
     Object.entries(answers).forEach(([questionId, score]) => {
       const question = surveyQuestions.find(q => q.id === questionId);
@@ -445,7 +445,7 @@ const MarkPage: React.FC = () => {
     console.log('Place ID:', selectedPlace?.place_id);
     console.log('Has geometry:', !!selectedPlace?.geometry);
     console.log('Geometry location:', selectedPlace?.geometry?.location);
-    
+
     if (!selectedPlace || (!selectedPlace.place_id && !selectedPlace.name)) {
       console.error('Submit rating: No valid place selected');
       setSubmitError('No business selected. Please go back and select a business first.');
@@ -453,7 +453,7 @@ const MarkPage: React.FC = () => {
     }
 
     const currentAccount = auth.getCurrentAccount();
-    
+
     // If no account, create a simple anonymous session
     let anonymousUserId: string | null = null;
     if (currentAccount.type === 'none') {
@@ -476,7 +476,7 @@ const MarkPage: React.FC = () => {
       // Get user ID and account type
       let userId: string;
       let accountType: 'full' | 'cookie' | 'anonymous';
-      
+
       const updatedAccount = auth.getCurrentAccount();
       if (updatedAccount.type === 'full') {
         userId = (updatedAccount.data as any)?.uid || '';
@@ -491,7 +491,7 @@ const MarkPage: React.FC = () => {
       } else {
         throw new Error('User ID not found');
       }
-      
+
       if (!userId) {
         throw new Error('User ID not found');
       }
@@ -518,12 +518,12 @@ const MarkPage: React.FC = () => {
       // Create or get business first
       // Ensure we have a business ID
       const businessId = selectedPlace.place_id || `manual_${selectedPlace.name?.replace(/\s+/g, '_').toLowerCase()}_${Date.now()}`;
-      
+
       const businessData = {
         ...selectedPlace,
         place_id: businessId
       };
-      
+
       console.log('Creating business with data:', businessData);
       await ratingsService.createBusiness(businessData);
 
@@ -615,15 +615,15 @@ const MarkPage: React.FC = () => {
       setIsConfirmed(true);
       setShowConfirmation(false);
       setCurrentStep(prev => prev + 1);
-      
-      // Show registration prompt after completing the business marking goal
+
+      // Show registration prompt after completing the business winking goal
       setTimeout(() => {
         showRegistrationPrompt('mark-business');
       }, 1000);
 
     } catch (error) {
       console.error('Failed to submit rating:', error);
-      
+
       if (error instanceof Error) {
         if (error.message.includes('already rated')) {
           setSubmitError('You have already rated this business. Each user can only rate a business once.');
@@ -643,11 +643,11 @@ const MarkPage: React.FC = () => {
     return surveyQuestions.map((question, index) => {
       const answer = answers[question.id];
       if (answer === undefined) return null;
-      
+
       // Find which response value this matches
       let answerText = '';
       let responseValue = 0;
-      
+
       if (Math.abs(answer - DEFAULT_RESPONSE_VALUES.yes) < 0.01) {
         answerText = 'Yes';
         responseValue = DEFAULT_RESPONSE_VALUES.yes;
@@ -679,7 +679,7 @@ const MarkPage: React.FC = () => {
           }
         }
       }
-      
+
       return {
         question: question.text,
         answer: answerText,
@@ -716,11 +716,11 @@ const MarkPage: React.FC = () => {
           <CardContent className="p-6 space-y-6">
             <div className="text-center">
               <h2 className="text-xl font-semibold">
-                {isEditMode ? 'Edit Your Rating' : 'Mark a Place'}
+                {isEditMode ? 'Edit Your Rating' : 'Wink at a Place'}
               </h2>
               <p className="text-muted-foreground text-sm">
-                {isEditMode 
-                  ? 'Update your responses for this establishment.' 
+                {isEditMode
+                  ? 'Update your responses for this establishment.'
                   : 'Start by finding the establishment.'
                 }
               </p>
@@ -732,7 +732,7 @@ const MarkPage: React.FC = () => {
                 </div>
               )}
             </div>
-            
+
             <div className="relative">
               <Input
                 placeholder="Enter the place name..."
@@ -740,7 +740,7 @@ const MarkPage: React.FC = () => {
                 onChange={(e) => {
                   const newValue = e.target.value;
                   setPlaceName(newValue);
-                  
+
                   // Only clear selection if the user is actually typing something different
                   // Don't clear if they're just editing the current selection
                   if (selectedPlace && newValue !== selectedPlace.name && newValue !== selectedPlace.formatted_address) {
@@ -796,7 +796,7 @@ const MarkPage: React.FC = () => {
                 </div>
               )}
             </div>
-            
+
             {selectedPlace && (
               <div className="p-3 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
                 <div className="flex items-start justify-between gap-2 text-sm text-green-800 dark:text-green-200">
@@ -825,7 +825,7 @@ const MarkPage: React.FC = () => {
                 </div>
               </div>
             )}
-            
+
             {/* Place Details Loading */}
             {isFetchingPlaceDetails && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -833,7 +833,7 @@ const MarkPage: React.FC = () => {
                 Loading place details...
               </div>
             )}
-            
+
             {/* Existing Rating Check */}
             {isCheckingExistingRating && selectedPlace && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -841,7 +841,7 @@ const MarkPage: React.FC = () => {
                 Checking if you've already rated this business...
               </div>
             )}
-            
+
             {hasExistingRating && existingRating && (
               <Alert className="bg-blue-50 border-blue-200">
                 <AlertCircle className="h-4 w-4 text-blue-600" />
@@ -856,24 +856,24 @@ const MarkPage: React.FC = () => {
                         )}
                       </p>
                     </div>
-                    <ScoreIndicator 
-                      score={existingRating.totalScore} 
-                      size="small" 
-                      variant="icon" 
+                    <ScoreIndicator
+                      score={existingRating.totalScore}
+                      size="small"
+                      variant="icon"
                     />
                   </div>
                 </AlertDescription>
               </Alert>
             )}
-            
-            <Button 
-              onClick={() => setCurrentStep(1)} 
-              className="w-full" 
+
+            <Button
+              onClick={() => setCurrentStep(1)}
+              className="w-full"
               disabled={!selectedPlace || isCheckingExistingRating || isFetchingPlaceDetails}
             >
-              {isFetchingPlaceDetails ? 'Loading place details...' : 
-               !selectedPlace && placeName ? 'Please select from suggestions' : 
-               hasExistingRating ? 'Edit Your Rating' : 'Continue'}
+              {isFetchingPlaceDetails ? 'Loading place details...' :
+                !selectedPlace && placeName ? 'Please select from suggestions' :
+                  hasExistingRating ? 'Edit Your Rating' : 'Continue'}
             </Button>
           </CardContent>
         </Card>
@@ -891,9 +891,9 @@ const MarkPage: React.FC = () => {
       setSubmitError('No business selected. Please select a business first.');
       return null;
     }
-    
+
     const scoreBreakdown = getScoreBreakdown();
-    
+
     return (
       <>
         <div className="max-w-md mx-auto p-4">
@@ -903,7 +903,7 @@ const MarkPage: React.FC = () => {
             </Button>
             <Progress value={100} className="h-2 flex-1" />
           </div>
-          
+
           <Card>
             <CardHeader className="text-center pb-4">
               <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground mb-2">
@@ -914,21 +914,21 @@ const MarkPage: React.FC = () => {
                 {isEditMode ? 'Confirm Your Updated Rating' : 'Confirm Your Assessment'}
               </CardTitle>
               <p className="text-sm text-muted-foreground">
-                {isEditMode 
+                {isEditMode
                   ? 'Please review your updated welcoming score based on your new responses'
                   : 'Please review the calculated welcoming score based on your responses'
                 }
               </p>
             </CardHeader>
-            
+
             <CardContent className="space-y-6">
               {/* Score Display */}
               <div className="text-center py-4 border rounded-lg bg-muted/20">
                 <h3 className="text-lg font-semibold mb-3">Calculated Winks Score</h3>
-                <ScoreIndicator 
-                  score={finalScore} 
-                  size="large" 
-                  variant="full" 
+                <ScoreIndicator
+                  score={finalScore}
+                  size="large"
+                  variant="full"
                   showLabel={true}
                   className="mx-auto"
                 />
@@ -943,7 +943,7 @@ const MarkPage: React.FC = () => {
                       How Winks Scores Work
                     </p>
                     <p className="text-blue-700 dark:text-blue-300">
-                      Scores range from 0 to 5.0. Higher scores indicate more welcoming environments. 
+                      Scores range from 0 to 5.0. Higher scores indicate more welcoming environments.
                       Some questions are reverse-scored to ensure balanced assessment.
                     </p>
                   </div>
@@ -968,8 +968,8 @@ const MarkPage: React.FC = () => {
 
               {/* Confirmation Buttons */}
               <div className="space-y-3">
-                <Button 
-                  onClick={handleConfirmScore} 
+                <Button
+                  onClick={handleConfirmScore}
                   className="w-full h-12 text-base bg-success hover:bg-success/90 text-white shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-[1.02]"
                   size="lg"
                   disabled={isSubmitting}
@@ -986,9 +986,9 @@ const MarkPage: React.FC = () => {
                     </>
                   )}
                 </Button>
-                <Button 
+                <Button
                   onClick={handleDisagreeScore}
-                  variant="outline" 
+                  variant="outline"
                   className="w-full h-12 text-base border-2 hover:bg-muted/50 transition-all duration-200 hover:scale-[1.01]"
                   size="lg"
                   disabled={isSubmitting}
@@ -997,7 +997,7 @@ const MarkPage: React.FC = () => {
                   This doesn't seem right
                 </Button>
               </div>
-              
+
               {/* Additional Context */}
               <div className="text-center text-xs text-muted-foreground pt-2">
                 Your assessment helps build a more welcoming community
@@ -1012,7 +1012,7 @@ const MarkPage: React.FC = () => {
             <AlertDialogHeader>
               <AlertDialogTitle>Score doesn't look right?</AlertDialogTitle>
               <AlertDialogDescription>
-                If the calculated score doesn't match your assessment of this business, you can retake the survey or submit it anyway. 
+                If the calculated score doesn't match your assessment of this business, you can retake the survey or submit it anyway.
                 Your honest responses help build a more accurate community picture.
               </AlertDialogDescription>
             </AlertDialogHeader>
@@ -1055,13 +1055,13 @@ const MarkPage: React.FC = () => {
                 {isEditMode ? 'Rating Updated!' : 'Mark Submitted!'}
               </h2>
               <p className="text-muted-foreground">
-                {isEditMode 
+                {isEditMode
                   ? 'Your rating has been successfully updated'
                   : 'Thank you for contributing to our welcoming community database'
                 }
               </p>
             </div>
-            
+
             <div className="py-6 border rounded-lg bg-gradient-to-br from-success/5 to-primary/5 border-success/20">
               <h3 className="text-lg font-semibold mb-4">
                 {isEditMode ? 'Updated Winks Score for' : 'Final Winks Score for'}
@@ -1070,10 +1070,10 @@ const MarkPage: React.FC = () => {
                 <MapPin className="h-4 w-4" />
                 <span className="font-medium">{placeName}</span>
               </div>
-              <ScoreIndicator 
-                score={finalScore} 
-                size="large" 
-                variant="full" 
+              <ScoreIndicator
+                score={finalScore}
+                size="large"
+                variant="full"
                 showLabel={true}
                 className="mx-auto"
               />
@@ -1084,24 +1084,24 @@ const MarkPage: React.FC = () => {
                 </div>
               )}
             </div>
-            
+
             <div className="space-y-3">
-              <Button 
-                onClick={() => navigate('/explore')} 
+              <Button
+                onClick={() => navigate('/explore')}
                 className="w-full h-12 bg-primary hover:bg-primary/90 shadow-md hover:shadow-lg transition-all duration-200"
                 size="lg"
               >
                 Explore More Businesses
               </Button>
-              <Button 
-                onClick={() => navigate('/')} 
-                variant="outline" 
+              <Button
+                onClick={() => navigate('/')}
+                variant="outline"
                 className="w-full h-10"
               >
                 Back to Home
               </Button>
             </div>
-            
+
             <div className="text-xs text-muted-foreground pt-2 border-t">
               Your contribution helps others find welcoming places in the community
             </div>
@@ -1125,10 +1125,10 @@ const MarkPage: React.FC = () => {
             <div className="p-4 bg-blue-50 border-2 border-blue-200 rounded-lg">
               <div className="flex items-start gap-3">
                 <div className="flex-shrink-0">
-                  <ScoreIndicator 
-                    score={existingRating.totalScore} 
-                    size="small" 
-                    variant="icon" 
+                  <ScoreIndicator
+                    score={existingRating.totalScore}
+                    size="small"
+                    variant="icon"
                   />
                 </div>
                 <div className="flex-1">
@@ -1146,7 +1146,7 @@ const MarkPage: React.FC = () => {
               </div>
             </div>
           )}
-          
+
           <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground border-b pb-4">
             <MapPin className="h-4 w-4" />
             <span>Reviewing: <strong>{placeName}</strong></span>
@@ -1168,13 +1168,13 @@ const MarkPage: React.FC = () => {
                         [DEFAULT_RESPONSE_VALUES.probablyNot]: 'Probably Not',
                         [DEFAULT_RESPONSE_VALUES.no]: 'No'
                       };
-                      
+
                       // For reverse scored questions, we need to flip the display
                       if (currentQuestion.reverseScored) {
                         const flippedValue = DEFAULT_RESPONSE_VALUES.yes - value;
                         return responseMap[flippedValue] || 'Unknown';
                       }
-                      
+
                       return responseMap[value] || 'Unknown';
                     })()}
                   </span>
@@ -1190,7 +1190,7 @@ const MarkPage: React.FC = () => {
           </div>
         </CardContent>
       </Card>
-      
+
       {/* Registration Prompt */}
       {showPrompt && completedGoal && (
         <RegistrationPrompt
@@ -1205,7 +1205,7 @@ const MarkPage: React.FC = () => {
           onRemindLater={handleRemindLater}
         />
       )}
-      
+
       {/* Registration Form */}
       {showForm && (
         <RegistrationForm

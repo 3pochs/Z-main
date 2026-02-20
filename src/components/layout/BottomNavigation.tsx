@@ -47,7 +47,7 @@ export const BottomNavigation: React.FC = () => {
           <Button
             size="icon"
             className="btn-floating rounded-full h-10 w-10 animate-float shadow-lg"
-            aria-label="Mark"
+            aria-label="Wink"
             onClick={() => navigate('/mark')}
           >
             <Plus className="h-4 w-4" />

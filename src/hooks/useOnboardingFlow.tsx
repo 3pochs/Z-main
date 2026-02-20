@@ -11,26 +11,26 @@ export interface OnboardingFlowHelpers {
   isPreferencesStep: boolean;
   isAccountStep: boolean;
   isCompleted: boolean;
-  
+
   // Navigation helpers
   goToNextStep: () => void;
   goToPreviousStep: () => void;
   goToStep: (step: OnboardingStep) => void;
   skipOnboarding: () => void;
-  
+
   // Goal management
   selectGoal: (goal: UserGoal) => void;
   navigateToGoal: (goal: UserGoal) => void;
-  
+
   // Completion helpers
   completeOnboardingFlow: () => void;
   shouldShowRegistrationPrompt: boolean;
-  
+
   // Progress tracking
   getStepProgress: () => number;
   getStepTitle: () => string;
   getStepDescription: () => string;
-  
+
   // Utility methods
   canGoBack: boolean;
   canGoForward: boolean;
@@ -64,7 +64,7 @@ export const useOnboardingFlow = (): OnboardingFlowHelpers => {
     isOnboardingComplete,
     shouldShowOnboarding,
   } = useOnboarding();
-  
+
   const navigate = useNavigate();
 
   // Current step information
@@ -105,15 +105,14 @@ export const useOnboardingFlow = (): OnboardingFlowHelpers => {
     navigate('/');
   }, [completeOnboarding, navigate]);
 
-  // Goal management
   const selectGoal = useCallback((goal: UserGoal) => {
     setPreferredGoal(goal);
-    goToNextStep(); // This will now go to the preferences step
-  }, [setPreferredGoal, goToNextStep]);
+    // Component handles navigation (with timeouts/logic)
+  }, [setPreferredGoal]);
 
   const navigateToGoal = useCallback((goal: UserGoal) => {
     setPreferredGoal(goal);
-    
+
     // Navigate to the appropriate page based on the goal
     switch (goal) {
       case 'mark-business':
@@ -130,7 +129,7 @@ export const useOnboardingFlow = (): OnboardingFlowHelpers => {
   // Completion helpers
   const completeOnboardingFlow = useCallback(() => {
     completeOnboarding();
-    
+
     // Navigate based on preferred goal or default to home
     if (state.preferredGoal) {
       navigateToGoal(state.preferredGoal);
@@ -180,26 +179,26 @@ export const useOnboardingFlow = (): OnboardingFlowHelpers => {
     isPreferencesStep,
     isAccountStep,
     isCompleted,
-    
+
     // Navigation helpers
     goToNextStep,
     goToPreviousStep,
     goToStep,
     skipOnboarding,
-    
+
     // Goal management
     selectGoal,
     navigateToGoal,
-    
+
     // Completion helpers
     completeOnboardingFlow,
     shouldShowRegistrationPrompt,
-    
+
     // Progress tracking
     getStepProgress,
     getStepTitle,
     getStepDescription,
-    
+
     // Utility methods
     canGoBack,
     canGoForward,
