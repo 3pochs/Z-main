@@ -18,6 +18,7 @@ import { useOnboarding } from '@/contexts/OnboardingProvider';
 import { useOnboardingFlow } from '@/hooks/useOnboardingFlow';
 import { LocationData, UserGoal } from '@/types/onboarding';
 import { cn } from '@/lib/utils';
+import MobileErrorBoundary from '@/components/mobile/MobileErrorBoundary';
 import { ratingsService } from '@/services/ratings.service';
 import { Business } from '@/types/firebase';
 import { getWelcomingLevel } from '@/components/business/ScoreIndicator';
@@ -25,6 +26,12 @@ import { collection, onSnapshot, query, where, limit } from 'firebase/firestore'
 import { db } from '@/services/firebase';
 import { calculateDistance } from '@/utils/geolocation';
 import { placesService } from '@/services/places.service';
+import {
+  GOOGLE_MAPS_AUTH_FAILURE_EVENT,
+  geocodeManualLocation,
+  isGoogleMapsReady,
+  toManualLocationData
+} from '@/utils/googleMaps';
 
 const quickFilters = [
   'Nearest', 'Recently Marked', 'Highly Marked', 'Safe Spots', 'Food', 'Bars'
@@ -33,22 +40,37 @@ const quickFilters = [
 const Index = () => {
   const isMobile = useIsMobile();
   const navigate = useNavigate();
-  const { location } = useLocation();
+  const { location, updateManualLocation } = useLocation();
   const { shouldShowOnboarding, isOnboardingComplete, state } = useOnboarding();
   const { navigateToGoal } = useOnboardingFlow();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [manualLocation, setManualLocation] = useState('');
+  const [manualLocationError, setManualLocationError] = useState<string | null>(null);
+  const [isSavingManualLocation, setIsSavingManualLocation] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [nearbyPlaces, setNearbyPlaces] = useState<google.maps.places.PlaceResult[]>([]);
   const [isLoadingPlaces, setIsLoadingPlaces] = useState(false);
   const [mapCenter, setMapCenter] = useState({ lat: 40.7128, lng: -74.006 }); // Default to NYC
   const [showWelcomeMessage, setShowWelcomeMessage] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [hasGoogleMapsAuthFailure, setHasGoogleMapsAuthFailure] = useState(false);
 
   // Firebase businesses state
   const [firebaseBusinesses, setFirebaseBusinesses] = useState<Business[]>([]);
   const [isLoadingBusinesses, setIsLoadingBusinesses] = useState(false);
   const [businessesError, setBusinessesError] = useState<string | null>(null);
+  const canRenderMap = isGoogleMapsReady() && !hasGoogleMapsAuthFailure;
+
+  useEffect(() => {
+    const handleGoogleMapsAuthFailure = () => {
+      setHasGoogleMapsAuthFailure(true);
+    };
+
+    window.addEventListener(GOOGLE_MAPS_AUTH_FAILURE_EVENT, handleGoogleMapsAuthFailure);
+    return () => {
+      window.removeEventListener(GOOGLE_MAPS_AUTH_FAILURE_EVENT, handleGoogleMapsAuthFailure);
+    };
+  }, []);
 
   useEffect(() => {
     if (location.latitude && location.longitude) {
@@ -251,19 +273,33 @@ const Index = () => {
     navigate(`/business/${place.place_id || place.name?.replace(/\s+/g, '-').toLowerCase()}`);
   };
 
-  const handleLocationChange = () => {
-    if (window.google?.maps && manualLocation) {
-      const geocoder = new google.maps.Geocoder();
-      geocoder.geocode({ address: manualLocation }, (results, status) => {
-        if (status === 'OK' && results && results[0]) {
-          const { lat, lng } = results[0].geometry.location;
-          setMapCenter({ lat: lat(), lng: lng() });
-        } else {
-          console.error(`Geocode was not successful for the following reason: ${status}`);
-          // You could add a user-facing error here, like a toast
-        }
-        setIsModalOpen(false);
-      });
+  const handleLocationChange = async () => {
+    const trimmedLocation = manualLocation.trim();
+    if (!trimmedLocation) {
+      setManualLocationError('Enter a city or address to continue.');
+      return;
+    }
+
+    setIsSavingManualLocation(true);
+    setManualLocationError(null);
+
+    try {
+      const resolvedLocation = await geocodeManualLocation(trimmedLocation);
+
+      if (!resolvedLocation) {
+        setManualLocationError('We could not find that location. Please try a more specific address.');
+        return;
+      }
+
+      updateManualLocation(toManualLocationData(resolvedLocation));
+      setMapCenter({ lat: resolvedLocation.latitude, lng: resolvedLocation.longitude });
+      setManualLocation(resolvedLocation.address);
+      setIsModalOpen(false);
+    } catch (error) {
+      console.error('Manual location lookup failed:', error);
+      setManualLocationError('We could not update your location right now. Please try again.');
+    } finally {
+      setIsSavingManualLocation(false);
     }
   };
 
@@ -476,10 +512,11 @@ const Index = () => {
 
   // Show main app interface for users who have completed onboarding
   return (
-    <div className={cn(
-      "min-h-screen bg-gradient-surface",
-      isOnboardingComplete && "animate-in fade-in-0 duration-700"
-    )}>
+    <MobileErrorBoundary>
+      <div className={cn(
+        "min-h-screen bg-gradient-surface",
+        isOnboardingComplete && "animate-in fade-in-0 duration-700"
+      )}>
       {/* Hero Section */}
       <section className="relative overflow-hidden rounded-[2.5rem] shadow-md">
         <div className="relative h-96 md:h-[500px]">
@@ -534,7 +571,15 @@ const Index = () => {
       </section>
 
       {/* Location Change Modal */}
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+      <Dialog
+        open={isModalOpen}
+        onOpenChange={(open) => {
+          setIsModalOpen(open);
+          if (!open) {
+            setManualLocationError(null);
+          }
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Change Location</DialogTitle>
@@ -550,14 +595,24 @@ const Index = () => {
               <Input
                 id="location"
                 value={manualLocation}
-                onChange={(e) => setManualLocation(e.target.value)}
+                onChange={(e) => {
+                  setManualLocation(e.target.value);
+                  if (manualLocationError) {
+                    setManualLocationError(null);
+                  }
+                }}
                 className="col-span-3"
                 placeholder="e.g., Brooklyn, NY"
               />
             </div>
+            {manualLocationError && (
+              <p className="text-sm text-destructive">{manualLocationError}</p>
+            )}
           </div>
           <DialogFooter>
-            <Button type="submit" onClick={handleLocationChange}>Save changes</Button>
+            <Button type="submit" onClick={handleLocationChange} disabled={isSavingManualLocation}>
+              {isSavingManualLocation ? 'Saving...' : 'Save changes'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -584,7 +639,7 @@ const Index = () => {
       <section className="px-4 mt-8">
         <div className="max-w-4xl mx-auto">
           <h2 className="text-lg font-semibold mb-4">Places near you</h2>
-          {window.google?.maps ? (
+          {canRenderMap ? (
             <InteractiveMap
               height="400px"
               center={mapCenter}
@@ -597,9 +652,9 @@ const Index = () => {
             <Card className="h-[400px] flex items-center justify-center bg-muted/50">
               <div className="text-center p-6">
                 <MapPin className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-semibold">Map unavailable</h3>
+                <h3 className="text-lg font-semibold">Map unavailable right now</h3>
                 <p className="text-muted-foreground max-w-xs mx-auto">
-                  Unable to load Google Maps. Please check your internet connection or API configuration.
+                  Search and location updates still work. If the map does not load on this device, try using the search bar or entering your location manually.
                 </p>
               </div>
             </Card>
@@ -785,7 +840,8 @@ const Index = () => {
           </Button>
         </div>
       </section >
-    </div >
+      </div >
+    </MobileErrorBoundary>
   );
 };
 

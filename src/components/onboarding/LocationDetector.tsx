@@ -14,6 +14,7 @@ import {
   handleKeyboardNavigation,
   generateId
 } from '../../lib/accessibility';
+import { geocodeManualLocation, toManualLocationData } from '../../utils/googleMaps';
 
 interface LocationDetectorProps {
   onLocationDetected: (location: LocationData) => void;
@@ -40,6 +41,8 @@ export const LocationDetector: React.FC<LocationDetectorProps> = ({
   const [manualLocationQuery, setManualLocationQuery] = useState('');
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1);
   const [isRetrying, setIsRetrying] = useState(false);
+  const [isResolvingManualLocation, setIsResolvingManualLocation] = useState(false);
+  const [manualEntryError, setManualEntryError] = useState<string | null>(null);
 
   const {
     suggestions,
@@ -120,12 +123,45 @@ export const LocationDetector: React.FC<LocationDetectorProps> = ({
       updateManualLocation(manualLocationData);
       setShowManualEntry(false);
       setManualLocationQuery('');
+      setManualEntryError(null);
       clearSuggestions();
+    }
+  };
+
+  const handleManualLocationSubmit = async () => {
+    const trimmedQuery = manualLocationQuery.trim();
+    if (!trimmedQuery) {
+      setManualEntryError('Enter a city or address to continue.');
+      return;
+    }
+
+    setIsResolvingManualLocation(true);
+    setManualEntryError(null);
+
+    try {
+      const resolvedLocation = await geocodeManualLocation(trimmedQuery);
+
+      if (!resolvedLocation) {
+        setManualEntryError('We could not find that location. Try a more specific city or address.');
+        return;
+      }
+
+      updateManualLocation(toManualLocationData(resolvedLocation));
+      setShowManualEntry(false);
+      setManualLocationQuery('');
+      clearSuggestions();
+      announceToScreenReader(`Location selected: ${resolvedLocation.city}`, 'polite');
+    } catch (error) {
+      console.error('Manual location lookup failed:', error);
+      setManualEntryError('We could not update your location right now. Please try again.');
+    } finally {
+      setIsResolvingManualLocation(false);
     }
   };
 
   const handleManualSearch = (query: string) => {
     setManualLocationQuery(query);
+    setManualEntryError(null);
     if (query.length > 2) {
       searchPlaces(query);
       announceToScreenReader(`Searching for locations matching "${query}"`, 'polite');
@@ -154,6 +190,8 @@ export const LocationDetector: React.FC<LocationDetectorProps> = ({
       onEnter: () => {
         if (selectedSuggestionIndex >= 0 && suggestions[selectedSuggestionIndex]) {
           handleManualLocationSelect(suggestions[selectedSuggestionIndex]);
+        } else if (manualLocationQuery.trim()) {
+          void handleManualLocationSubmit();
         }
       },
       onEscape: () => {
@@ -289,6 +327,20 @@ export const LocationDetector: React.FC<LocationDetectorProps> = ({
                   ))}
                 </div>
               )}
+
+              {manualEntryError && (
+                <p className="text-sm text-destructive">{manualEntryError}</p>
+              )}
+
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={() => void handleManualLocationSubmit()}
+                disabled={isResolvingManualLocation || !manualLocationQuery.trim()}
+              >
+                {isResolvingManualLocation ? 'Using location...' : 'Use this location'}
+              </Button>
             </div>
           )}
         </CardContent>
@@ -440,6 +492,20 @@ export const LocationDetector: React.FC<LocationDetectorProps> = ({
                   ))}
                 </div>
               )}
+
+              {manualEntryError && (
+                <p className="text-sm text-destructive">{manualEntryError}</p>
+              )}
+
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={() => void handleManualLocationSubmit()}
+                disabled={isResolvingManualLocation || !manualLocationQuery.trim()}
+              >
+                {isResolvingManualLocation ? 'Using location...' : 'Use this location'}
+              </Button>
             </div>
           )}
         </CardContent>
@@ -554,6 +620,20 @@ export const LocationDetector: React.FC<LocationDetectorProps> = ({
                 ))}
               </div>
             )}
+
+            {manualEntryError && (
+              <p className="text-sm text-destructive">{manualEntryError}</p>
+            )}
+
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              onClick={() => void handleManualLocationSubmit()}
+              disabled={isResolvingManualLocation || !manualLocationQuery.trim()}
+            >
+              {isResolvingManualLocation ? 'Using location...' : 'Use this location'}
+            </Button>
           </div>
         )}
       </CardContent>

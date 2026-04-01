@@ -97,7 +97,7 @@ src/
 
 ### Step 2: Login
 - Username: `admin`
-- Password: `admin`
+- Password: Use the current maintainer-provided credential
 
 ### Step 3: Verify Dashboard
 The dashboard should show:

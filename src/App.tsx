@@ -31,6 +31,7 @@ import { AuthProvider } from "./contexts/AuthProvider";
 import { PreferencesProvider } from "./contexts/PreferencesProvider";
 import { NotificationProvider } from "./contexts/NotificationProvider";
 import { AdminAuthProvider } from "./contexts/AdminAuthProvider";
+import { GOOGLE_MAPS_AUTH_FAILURE_EVENT } from "./utils/googleMaps";
 
 const API_KEY = import.meta.env.VITE_GOOGLE_PLACES_API_KEY;
 const LIBRARIES: ('places')[] = ['places'];
@@ -51,6 +52,21 @@ const GoogleMapsLoader = () => {
     googleMapsApiKey: API_KEY ?? "",
     libraries: LIBRARIES,
   });
+
+  React.useEffect(() => {
+    const windowWithAuthFailure = window as Window & { gm_authFailure?: () => void };
+    const previousAuthFailureHandler = windowWithAuthFailure.gm_authFailure;
+
+    windowWithAuthFailure.gm_authFailure = () => {
+      console.error("Google Maps authentication failed");
+      window.dispatchEvent(new Event(GOOGLE_MAPS_AUTH_FAILURE_EVENT));
+      previousAuthFailureHandler?.();
+    };
+
+    return () => {
+      windowWithAuthFailure.gm_authFailure = previousAuthFailureHandler;
+    };
+  }, []);
 
   React.useEffect(() => {
     if (isLoaded) {

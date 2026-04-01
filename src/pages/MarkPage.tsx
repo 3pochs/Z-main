@@ -28,6 +28,8 @@ import { useAuth } from '@/contexts/AuthProvider';
 import { ratingsService, SurveyResponses, SURVEY_QUESTIONS, DEFAULT_RESPONSE_VALUES } from '@/services/ratings.service';
 import { ipAddressService } from '@/services/ipAddress.service';
 import { usePreferencePersistence } from '@/hooks/usePreferencePersistence';
+import MobileErrorBoundary from '@/components/mobile/MobileErrorBoundary';
+import { isGooglePlacesReady } from '@/utils/googleMaps';
 
 // Use the centralized survey questions configuration
 const surveyQuestions = SURVEY_QUESTIONS.map(q => ({
@@ -289,9 +291,13 @@ const MarkPage: React.FC = () => {
       setIsFetchingPlaceDetails(true);
       try {
         // Fetch full place details using Google Places API
-        if (window.google) {
-          const dummyDiv = document.createElement('div');
-          const service = new google.maps.places.PlacesService(dummyDiv);
+        if (isGooglePlacesReady()) {
+          const tempDiv = document.createElement('div');
+          tempDiv.style.visibility = 'hidden';
+          tempDiv.style.position = 'absolute';
+          tempDiv.style.left = '-9999px';
+          document.body.appendChild(tempDiv);
+          const service = new google.maps.places.PlacesService(tempDiv);
 
           const request: google.maps.places.PlaceDetailsRequest = {
             placeId: suggestion.place_id,
@@ -299,6 +305,9 @@ const MarkPage: React.FC = () => {
           };
 
           service.getDetails(request, (result, status) => {
+            if (document.body.contains(tempDiv)) {
+              document.body.removeChild(tempDiv);
+            }
             if (status === google.maps.places.PlacesServiceStatus.OK && result) {
               console.log('Place details fetched:', result);
               setSelectedPlace(result);
@@ -704,7 +713,8 @@ const MarkPage: React.FC = () => {
     const isAuthenticated = currentAccount.type !== 'none';
 
     return (
-      <div className="max-w-md mx-auto p-4">
+      <MobileErrorBoundary>
+        <div className="max-w-md mx-auto p-4">
         <div className="flex items-center gap-4 mb-6">
           <Button variant="ghost" size="icon" onClick={handleBack}><ArrowLeft className="h-5 w-5" /></Button>
           <Progress value={0} className="h-2 flex-1" />
@@ -756,7 +766,10 @@ const MarkPage: React.FC = () => {
                       <div
                         key={suggestion.place_id}
                         className="p-3 hover:bg-accent rounded-md cursor-pointer border-b border-border last:border-b-0"
-                        onClick={() => handleSuggestionClick(suggestion)}
+                        onMouseDown={(event) => {
+                          event.preventDefault();
+                          void handleSuggestionClick(suggestion);
+                        }}
                       >
                         <div className="font-medium text-sm">
                           {suggestion.name || 'Unknown Business'}
@@ -877,7 +890,8 @@ const MarkPage: React.FC = () => {
             </Button>
           </CardContent>
         </Card>
-      </div>
+        </div>
+      </MobileErrorBoundary>
     );
   }
 
@@ -895,7 +909,8 @@ const MarkPage: React.FC = () => {
     const scoreBreakdown = getScoreBreakdown();
 
     return (
-      <>
+      <MobileErrorBoundary>
+        <>
         <div className="max-w-md mx-auto p-4">
           <div className="flex items-center gap-4 mb-6">
             <Button variant="ghost" size="icon" onClick={() => setShowConfirmation(false)}>
@@ -1036,14 +1051,16 @@ const MarkPage: React.FC = () => {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-      </>
+        </>
+      </MobileErrorBoundary>
     );
   }
 
   // Final Step: Show Score
   if (currentStep > surveyQuestions.length) {
     return (
-      <div className="max-w-md mx-auto p-4 text-center">
+      <MobileErrorBoundary>
+        <div className="max-w-md mx-auto p-4 text-center">
         <Card className="border-success/20 shadow-lg">
           <CardContent className="p-6 space-y-6">
             <div className="text-center">
@@ -1107,13 +1124,15 @@ const MarkPage: React.FC = () => {
             </div>
           </CardContent>
         </Card>
-      </div>
+        </div>
+      </MobileErrorBoundary>
     );
   }
 
   // Survey Steps
   return (
-    <div className="max-w-md mx-auto p-4">
+    <MobileErrorBoundary>
+      <div className="max-w-md mx-auto p-4">
       <div className="flex items-center gap-4 mb-6">
         <Button variant="ghost" size="icon" onClick={handleBack}><ArrowLeft className="h-5 w-5" /></Button>
         <Progress value={progress} className="h-2" />
@@ -1214,7 +1233,8 @@ const MarkPage: React.FC = () => {
           isLoading={isRegistrationLoading}
         />
       )}
-    </div>
+      </div>
+    </MobileErrorBoundary>
   );
 };
 

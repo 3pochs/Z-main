@@ -14,7 +14,7 @@ const AdminAuthContext = createContext<AdminAuthContextType | undefined>(undefin
 // Secure credentials - in production, this should be environment variables
 const ADMIN_CREDENTIALS = {
     username: 'admin',
-    password: 'admin'
+    password: 'fridayMarch23!'
 };
 
 // Session key for secure storage
