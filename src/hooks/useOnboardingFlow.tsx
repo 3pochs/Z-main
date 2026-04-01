@@ -73,7 +73,9 @@ export const useOnboardingFlow = (): OnboardingFlowHelpers => {
   const isGoalSelectionStep = currentStep === 'goal-selection';
   const isPreferencesStep = currentStep === 'preferences';
   const isAccountStep = currentStep === 'account';
-  const isCompleted = currentStep === 'completed' || isOnboardingComplete;
+  // Treat the "completed" step as a real renderable step.
+  // Only report onboarding as completed after the persisted completion flag is set.
+  const isCompleted = isOnboardingComplete;
 
   // Step navigation helpers
   const getCurrentStepIndex = useCallback(() => {
